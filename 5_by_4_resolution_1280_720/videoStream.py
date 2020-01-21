@@ -3,7 +3,6 @@ import numpy as np
 import cv2 as cv
 import glob
 import math
-import time
 import imutils
 
 # Load previously saved data
@@ -35,7 +34,6 @@ cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
 #cap = VideoStream(src=0).start()
 focal_length = 934.3
 while(True):
-    #time.sleep(.5)
     # Capture frame-by-frame
     ret1, frame = cap.read()
     #frame = imutils.resize(frame, width=400)
@@ -51,19 +49,19 @@ while(True):
 
     if ret2 == True:
         corners2 = cv.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
-        print("corners2:")
-        print(corners2)
+        #print("corners2:")
+        #print(corners2)
         length = abs(corners2[0][0] - corners2[len(corners2)-1][0])
-        print("length")
-        print(length[0])
+        #print("length")
+        #print(length[0])
         known_distance = 61 # cm
         known_width = 10.2 # cm
         #focal_lenth = (length[0]*known_distance)/known_width
-        print("focal_lenth:")
-        print(focal_length)
-        print("distance:")
+        #print("focal_lenth:")
+        #print(focal_length)
+        #print("distance:")
         distance = distance_to_camera(known_width, focal_length, length[0])
-        print(distance)
+        #print(distance)
 
         # Find the rotation and translation vectors.
         try:
@@ -90,6 +88,7 @@ while(True):
         # print("dist:")
         # print(dist)
         roll, pitch, yaw = cv.decomposeProjectionMatrix(pmat)[-1]
+        print("Angle:")
         print(roll)
         cos = math.cos(math.radians(roll))
         print("real distance:")
