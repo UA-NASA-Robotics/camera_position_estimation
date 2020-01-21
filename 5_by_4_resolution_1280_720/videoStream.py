@@ -3,7 +3,6 @@ import numpy as np
 import cv2 as cv
 import glob
 import math
-from scipy.spatial.transform import Rotation as R
 import time
 import imutils
 
