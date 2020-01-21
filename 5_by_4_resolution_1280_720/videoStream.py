@@ -28,8 +28,8 @@ def distance_to_camera(knownWidth, focalLength, perWidth):
 	return (knownWidth * focalLength) / perWidth
 row = 4
 col = 3
-#cap = cv.VideoCapture(0)
-cap = cv.VideoCapture(0,cv.CAP_DSHOW)
+cap = cv.VideoCapture(0)
+#cap = cv.VideoCapture(0,cv.CAP_DSHOW)
 cap.set(cv.CAP_PROP_FRAME_WIDTH, 1280)
 cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
 #cap.set(cv.cv2.CAP_PROP_FPS, 10)
@@ -105,8 +105,8 @@ while(True):
             continue
                                       
     # Show image 
-    frame = imutils.resize(frame, width=800)
-    cv.imshow("output", frame)  
+    #frame = imutils.resize(frame, width=800)
+    #cv.imshow("output", frame)  
     key = cv.waitKey(1) & 0xFF
 
     # if the `q` key was pressed, break from the loop
