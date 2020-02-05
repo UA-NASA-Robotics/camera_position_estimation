@@ -69,8 +69,8 @@ while(True):
         print("Angle:")
         print(roll)
         cos = math.cos(math.radians(roll))
-        print("real distance:")
-        print(cos * distance)
+        #print("real distance:")
+        #print(cos * distance)
 
 # When everything done, release the capture
 cap.release()

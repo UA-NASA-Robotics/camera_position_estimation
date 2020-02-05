@@ -56,7 +56,8 @@ while(True):
         #distance = distance_to_camera(known_width, focal_length, length[0])
         # Find the rotation and translation vectors.
         try:
-            ret,rvecs,tvecs, inliers = cv.solvePnPRansac(objp, corners2, mtx, dist) #try Ransac
+            #ret,rvecs,tvecs, inliers = cv.solvePnPRansac(objp, corners2, mtx, dist) #try Ransac
+            ret,rvecs,tvecs = cv.solvePnP(objp, corners2, mtx, dist) #try Ransac
         except:
             print("error")
             continue
