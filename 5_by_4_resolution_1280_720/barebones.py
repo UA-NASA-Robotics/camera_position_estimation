@@ -29,6 +29,10 @@ col = 3
 
 #cap.set(cv.cv2.CAP_PROP_FPS, 10)
 #cap = VideoStream(src=0).start()
+criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+objp = np.zeros((col*row,3), np.float32)
+objp[:,:2] = np.mgrid[0:row,0:col].T.reshape(-1,2)
+axis = np.float32([[3,0,0], [0,3,0], [0,0,-3]]).reshape(-1,3)
 focal_length = 934.3
 known_distance = 61 # cm
 known_width = 10.2 # cm
@@ -45,10 +49,7 @@ while(True):
     # Our operations on the frame come here
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
     ret2, corners = cv.findChessboardCorners(gray, (row,col),None) #worked!
-    criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-    objp = np.zeros((col*row,3), np.float32)
-    objp[:,:2] = np.mgrid[0:row,0:col].T.reshape(-1,2)
-    axis = np.float32([[3,0,0], [0,3,0], [0,0,-3]]).reshape(-1,3)
+    
 	
     if ret2 == True:
         corners2 = cv.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
