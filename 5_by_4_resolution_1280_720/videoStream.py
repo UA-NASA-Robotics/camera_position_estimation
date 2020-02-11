@@ -74,6 +74,8 @@ while(True):
         #cos = math.cos(math.radians(roll))
         #print("real distance:")
         #print(cos * distance)
+     else:
+	print("nothing")
 
 
 cv.destroyAllWindows()
