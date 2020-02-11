@@ -26,10 +26,7 @@ def distance_to_camera(knownWidth, focalLength, perWidth):
 	return (knownWidth * focalLength) / perWidth
 row = 4
 col = 3
-cap = cv.VideoCapture(0)
-#cap = cv.VideoCapture(0,cv.CAP_DSHOW)
-cap.set(cv.CAP_PROP_FRAME_WIDTH, 1280)
-cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
+
 #cap.set(cv.cv2.CAP_PROP_FPS, 10)
 #cap = VideoStream(src=0).start()
 focal_length = 934.3
@@ -43,7 +40,13 @@ axis = np.float32([[3,0,0], [0,3,0], [0,0,-3]]).reshape(-1,3)
 
 while(True):
     # Capture frame-by-frame
+    cap = cv.VideoCapture(0)
+    #cap = cv.VideoCapture(0,cv.CAP_DSHOW)
+    cap.set(cv.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
     ret1, frame = cap.read()
+    # When everything done, release the capture
+    cap.release()
     #frame = imutils.resize(frame, width=400)
     # Our operations on the frame come here
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
@@ -72,6 +75,5 @@ while(True):
         #print("real distance:")
         #print(cos * distance)
 
-# When everything done, release the capture
-cap.release()
+
 cv.destroyAllWindows()
