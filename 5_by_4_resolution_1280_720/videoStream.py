@@ -53,14 +53,14 @@ while(True):
     ret2, corners = cv.findChessboardCorners(gray, (row,col),None) #worked!
     
     if ret2 == True:
-        corners2 = cv.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
+        #corners2 = cv.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
         #print("corners2:")
         #print(corners2)
-        length = abs(corners2[0][0] - corners2[len(corners2)-1][0])
-        distance = distance_to_camera(known_width, focal_length, length[0])
+        #length = abs(corners[0][0] - corners[len(corners)-1][0])
+        #distance = distance_to_camera(known_width, focal_length, length[0])
         # Find the rotation and translation vectors.
         try:
-            ret,rvecs,tvecs, inliers = cv.solvePnPRansac(objp, corners2, mtx, dist) #try Ransac
+            ret,rvecs,tvecs, inliers = cv.solvePnPRansac(objp, corners, mtx, dist) #try Ransac
         except:
             print("error")
             continue
@@ -71,7 +71,7 @@ while(True):
         roll, pitch, yaw = cv.decomposeProjectionMatrix(pmat)[-1]
         print("Angle:")
         print(roll)
-        cos = math.cos(math.radians(roll))
+        #cos = math.cos(math.radians(roll))
         #print("real distance:")
         #print(cos * distance)
 
