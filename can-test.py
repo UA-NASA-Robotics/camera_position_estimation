@@ -1,7 +1,7 @@
 import serial
 import can
 
-bus = can.interface.Bus(bustype='seeedstudio', channel='/dev/ttyUSB0', bitrate=500000)
+bus = can.interface.Bus(bustype='seeedstudio', channel='/dev/ttyUSB0', bitrate=50000)
      
 
 msg = can.Message(arbitration_id=0x00000001,
