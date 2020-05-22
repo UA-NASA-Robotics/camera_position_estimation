@@ -66,6 +66,7 @@ while(True):
         corners2 = cv.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
         #print("corners2:")
         #print(corners2)
+
         #print("location:")
         #print(location(corners2))
         length = abs(corners2[0][0][1] - corners2[3][0][1])
@@ -84,11 +85,19 @@ while(True):
         except:
             print("error")
             continue
+        #r = R.from_rotvec(3,rvecs)
         # Convert 3x1 rotation vector to rotation matrix for further computation            
         rotation_matrix, jacobian = cv.Rodrigues(rvecs)
         tvecs_new = -np.matrix(rotation_matrix).T * np.matrix(tvecs)
+
          # Projection Matrix
         pmat = np.hstack((rotation_matrix, tvecs)) # [R|t]
+        # print("camera matrix:")
+        # print(mtx)
+        # print("[R|t]")
+        # print(pmat)
+        # print("dist:")
+        # print(dist)
         roll, pitch, yaw = cv.decomposeProjectionMatrix(pmat)[-1]
         print(roll)
         x_distance = math.cos(roll*math.pi/180)*distance
@@ -98,6 +107,7 @@ while(True):
         print("Y DISTANCE:")
         print(y_distance) #bad values!
         print("giving me bad values!")
+
         #print('Roll: {:.2f}\nPitch: {:.2f}\nYaw: {:.2f}'.format(float(roll), float(pitch), float(yaw)))
         # # project 3D points to image plane
         imgpts, jac = cv.projectPoints(axis, rvecs, tvecs, mtx, dist)
@@ -106,7 +116,7 @@ while(True):
         except:
             print("error in draw function")
             continue
-                                      
+
     # Show image 
     frame = imutils.resize(frame, width=800)
     cv.imshow("output", frame)  
