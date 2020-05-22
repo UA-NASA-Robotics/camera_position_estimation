@@ -34,8 +34,8 @@ def distance_to_camera(knownWidth, focalLength, perWidth):
 	return (knownWidth * focalLength) / perWidth
 row = 4
 col = 3
-#cap = cv.VideoCapture(0)
-cap = cv.VideoCapture(0,cv.CAP_DSHOW)
+cap = cv.VideoCapture(0)
+#cap = cv.VideoCapture(0,cv.CAP_DSHOW)
 cap.set(cv.CAP_PROP_FRAME_WIDTH, 1280) #800, 1280
 cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720) #600, 720
 cap.set(cv.CAP_PROP_BUFFERSIZE, 0)
