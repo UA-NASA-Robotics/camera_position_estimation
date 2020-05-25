@@ -114,7 +114,7 @@ while(True):
 
         # Send CAN message!
         msg = can.Message(arbitration_id=0x07,
-                      data=[roll, x_distance, y_distance, 0, 0, 0, 0, 0],
+                      data=[int(roll), int(x_distance), int(y_distance), 0, 0, 0, 0, 0],
                       is_extended_id=True)
         try:
           bus.send(msg)
