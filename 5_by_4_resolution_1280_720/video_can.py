@@ -111,10 +111,10 @@ while(True):
         except:
             print("error in draw function")
             continue
-
+        
         # Send CAN message!
         msg = can.Message(arbitration_id=0x07,
-                      data=[int(roll), int(x_distance), int(y_distance), 0, 0, 0, 0, 0],
+                      data=[int(abs(roll)), int(x_distance), int(y_distance), 0, 0, 0, 0, 0],
                       is_extended_id=True)
         try:
           bus.send(msg)
