@@ -57,7 +57,7 @@ pixel_length = 212.6
 focal_length = (pixel_length*known_distance)/known_length
 
 while(True):
-    time.sleep(.1)
+    time.sleep(100)
     # Capture frame-by-frame
     ret1, frame = cap.read()
     #frame = imutils.resize(frame, width=400)
