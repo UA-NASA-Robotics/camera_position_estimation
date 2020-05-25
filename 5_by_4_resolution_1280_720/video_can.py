@@ -112,6 +112,16 @@ while(True):
             print("error in draw function")
             continue
 
+        # Send CAN message!
+        msg = can.Message(arbitration_id=0x07,
+                      data=[roll, x_distance, y_distance, 0, 0, 0, 0, 0],
+                      is_extended_id=True)
+        try:
+          bus.send(msg)
+          print("Message sent on {}".format(bus.channel_info))
+        except can.CanError:
+          print("Message NOT sent")
+
     # Show image 
     frame = imutils.resize(frame, width=800)
     cv.imshow("output", frame)  
@@ -121,15 +131,7 @@ while(True):
     if key == ord("q"):
         break
     
-    # Send CAN message!
-    msg = can.Message(arbitration_id=0x07,
-                  data=[roll, x_distance, y_distance, 0, 0, 0, 0, 0],
-                  is_extended_id=True)
-    try:
-      bus.send(msg)
-      print("Message sent on {}".format(bus.channel_info))
-    except can.CanError:
-      print("Message NOT sent")
+    
 # When everything done, release the capture
 cap.release()
 cv2.destroyAllWindows()
