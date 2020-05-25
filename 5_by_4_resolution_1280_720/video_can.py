@@ -10,7 +10,7 @@ import can
 import time 
 
 # Candlelight firmware on Linux
-bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=1000000)
+bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=500000)
 msg = can.Message(arbitration_id=0x07,
                   data=[0, 25, 0, 1, 3, 1, 4, 1],
                   is_extended_id=True)
