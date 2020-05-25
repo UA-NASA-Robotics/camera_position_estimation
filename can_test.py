@@ -1,10 +1,10 @@
 import can
 
 # Candlelight firmware on Linux
-#bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=500000)
+bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=500000)
 
 # Stock slcan firmware on Linux
-bus = can.interface.Bus(bustype='slcan', channel='/dev/ttyACM5', bitrate=500000)
+#bus = can.interface.Bus(bustype='slcan', channel='/dev/ttyACM5', bitrate=500000)
 
 # Stock slcan firmware on Windows
 #bus = can.interface.Bus(bustype='slcan', channel='COM0', bitrate=500000)
