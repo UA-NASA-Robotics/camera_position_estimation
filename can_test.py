@@ -1,4 +1,5 @@
 import can
+import time 
 
 # Candlelight firmware on Linux
 bus = can.interface.Bus(bustype='socketcan', channel='can0', bitrate=500000)
@@ -14,7 +15,7 @@ msg = can.Message(arbitration_id=0xc0ffee,
                   is_extended_id=True)
 
 while(1):
-
+  time.sleep(500)
   try:
       bus.send(msg)
       print("Message sent on {}".format(bus.channel_info))
