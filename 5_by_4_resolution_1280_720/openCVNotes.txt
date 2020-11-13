@@ -1,0 +1,313 @@
+Notes / Tutorial Summary on openCV & Pose Estimation
+(assumes no prior knowledge of cv or other machine learning models, minimal understanding of python)
+
+2 major types of distortion:
+
+    Radial: straight lines appear curved (bulge out)
+
+    Linear equations to correct radial distortion:
+
+        Xcorrected = x(1 + k1r^2 + k2r^4 + k3r^4)
+        Ycorrected = y(1 + k1r^2 + k2r^4 + k3r^4)
+
+    Tangential: parts of image appear closer because lens 
+                is not perfectly parallel to imaging plane
+
+        
+    Linear equations to correct tangential distortion:
+
+        Xcorrected = x + [2p1xy + p2(r^2 + 2x^2)]
+        Ycorrected = y + [p1(r^2 + 2y^2) + 2p2xy]
+
+    From both sets of equations we have 5 coefficients that need to be determined
+
+        Distortion coefficients: (k1, k2, p1, p2, p3)
+    
+Intrinsic and Extrinsic camera parameters
+
+Intrinsic parameters:
+
+    Focal length    (fx, fy)
+    Optical centers (cx, cy)
+
+    these are stored in the camera matrix:
+
+            camera matrix = | fx   0   cx |
+                            | 0   fy   cy |
+                            | 0    0    1 |
+
+Extrinsic parameters:
+
+    These correspond to rotation and translation vectors which translate a point (coordinates)
+    in 3-D space to a coordinate system
+
+
+Calibration of the camera with images of the target (chess board here) is performed to determine
+the distortion coefficients.  A minimum of 10 test images is needed to calibrate sufficiently well
+Calibration is accomplished by matching points in 3-D space to 2-D points of an image
+(this is performed using the openCV library,
+    we only need to supply the images and call some functions)
+
+Setting Up Calibration
+
+    Finding chessboard pattern with cv:
+
+            cv2.findChessboardCorners() 
+
+            *** note: cv2 is the openCV library.  It may be imported under an alias
+                (which will be visible at the top of the file), but any function
+                with the cv2 (or alias) prefix is an openCV function.  Info on these
+                can be found at one of the following:
+
+https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_calib3d/py_pose/py_pose.html
+https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_calib3d/py_calibration/py_calibration.html
+https://docs.opencv.org/master/d9/df8/tutorial_root.html
+
+
+    Once corners are located, increase accuracy with:
+
+            cv2.cornerSubPix()
+    
+    Can draw the pattern using:
+
+            cv2.drawChessboardCorners()
+
+########################################################################################
+### Python code using above functions
+### from openCV calibration tutorial
+#####################################
+
+import numpy as np
+import cv2
+import glob
+
+# termination criteria
+criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+
+# prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
+objp = np.zeros((6*7,3), np.float32)
+objp[:,:2] = np.mgrid[0:7,0:6].T.reshape(-1,2)
+
+# Arrays to store object points and image points from all the images.
+objpoints = [] # 3d point in real world space
+imgpoints = [] # 2d points in image plane.
+
+images = glob.glob('*.jpg')
+
+for fname in images:
+    img = cv2.imread(fname)
+    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+
+    # Find the chess board corners
+    ret, corners = cv2.findChessboardCorners(gray, (7,6),None)
+
+    # If found, add object points, image points (after refining them)
+    if ret == True:
+        objpoints.append(objp)
+
+        corners2 = cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
+        imgpoints.append(corners2)
+
+        # Draw and display the corners
+        img = cv2.drawChessboardCorners(img, (7,6), corners2,ret)
+        cv2.imshow('img',img)
+        cv2.waitKey(500)
+
+cv2.destroyAllWindows()            
+
+########################################################################################
+
+Calibration
+
+    Use:
+        cv2.calibrateCamera()
+
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)
+
+    returns: 
+            ret- boolean value for chessboard found
+            mtx- camera matrix
+            dist- distortion coefficients
+            rvecs- rotation vectors
+            tvecs- translation vectors
+
+########################################################################################
+
+Undistortion
+
+    First, refine the camera matrix based on a free scaling parameter [alpha]
+
+        Use:
+            cv2.getOptimalNewCameraMatrix()
+
+        if alpha = 0 -> returns undistorted image with minimum unwanted pixels
+        if alpha = 1 -> all pixels retained with some added black pixels
+
+        Code snippet:
+
+            img = cv2.imread('left12.jpg')
+            h,  w = img.shape[:2]
+            newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),1,(w,h))
+
+        Use roi returned value to crop the result
+
+        Alternative
+
+            Use:
+                cv2.undistort()
+
+            Code snippet:
+
+                # undistort
+                dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
+                # crop the image
+                x,y,w,h = roi
+                dst = dst[y:y+h, x:x+w]
+                cv2.imwrite('calibresult.png',dst)
+
+########################################################################################
+
+        Remapping
+
+            This procedure finds a mapping function from distorted image to undistorted image
+            (This is in effect finding a procedure for undistorting images of the selected chessboard captured by this particular camera)
+            
+            Use:
+                cv2.remap()
+
+            Code snippet:
+
+                # undistort
+                mapx,mapy = cv2.initUndistortRectifyMap(mtx,dist,None,newcameramtx,(w,h),5)
+                dst = cv2.remap(img,mapx,mapy,cv2.INTER_LINEAR)
+
+                # crop the image
+                x,y,w,h = roi
+                dst = dst[y:y+h, x:x+w]
+                cv2.imwrite('calibresult.png',dst)
+
+        Once these steps are complete, we can save the camera matrix and distortion coefficients for future use
+        
+        Re-projection Error
+            This value tells us the error associated with our found parameters (how exact camera matrix and distortion coefficients are)
+            Our goal is to minimize this value
+
+            Code snippet:
+                mean_error = 0
+                for i in xrange(len(objpoints)):
+                    imgpoints2, _ = cv2.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
+                    error = cv2.norm(imgpoints[i],imgpoints2, cv2.NORM_L2)/len(imgpoints2)
+                    tot_error += error
+
+                print "total error: ", mean_error/len(objpoints)
+
+########################################################################################
+########################################################################################
+
+Pose Estimation
+
+Here we will "draw" XYZ axes on our now undistorted image 
+This will allow us to simulate 3 dimensions and assess the varying depth of the image
+
+    x-axis: blue
+    y-axis: green
+    z-axis: red 
+
+    * z-axis (red line will appear to be perpendicular to the chessboard,
+                w/ x and y being horizontal and vertical respectively) 
+    
+    To do this, we will load the camera matrix and distortion coefficients from the calibration peformed earlier
+
+    Code snippet:
+
+        import cv2
+        import numpy as np
+        import glob
+
+        # Load previously saved data
+        with np.load('B.npz') as X:
+            mtx, dist, _, _ = [X[i] for i in ('mtx','dist','rvecs','tvecs')]
+
+    
+    Now we will create our own draw() function that will take the chessboard corners and axis points to draw our axes
+
+        def draw(img, corners, imgpts):
+        corner = tuple(corners[0].ravel())
+        img = cv2.line(img, corner, tuple(imgpts[0].ravel()), (255,0,0), 5)
+        img = cv2.line(img, corner, tuple(imgpts[1].ravel()), (0,255,0), 5)
+        img = cv2.line(img, corner, tuple(imgpts[2].ravel()), (0,0,255), 5)
+        return img
+
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+        objp = np.zeros((6*7,3), np.float32)
+        objp[:,:2] = np.mgrid[0:7,0:6].T.reshape(-1,2)
+
+        axis = np.float32([[3,0,0], [0,3,0], [0,0,-3]]).reshape(-1,3)
+
+        * negative coordinate indicates line drawn toward camera
+
+    Next, we load each image, search for the chessboard grid, and if found, refine it with subcorner pixels
+
+    Calculate rotation and translation
+
+        Use:
+            cv2.solvePnPRansac()
+        
+    Once we have the transformation matrices from the above function, we use them to project our axis points to the image plane
+    (this means we find points on the image that correspond to our 3D coordinates
+        This is how we interpret the size and perspective of the chessboard image)
+
+    Finally, we use the draw() function to draw the lines connecting these projected points to our selected corner (origin of axes)
+
+        Code snippet:
+
+            for fname in glob.glob('left*.jpg'):
+                img = cv2.imread(fname)
+                gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+                ret, corners = cv2.findChessboardCorners(gray, (7,6),None)
+
+                if ret == True:
+                    corners2 = cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
+
+                    # Find the rotation and translation vectors.
+                    rvecs, tvecs, inliers = cv2.solvePnPRansac(objp, corners2, mtx, dist)
+
+                    # project 3D points to image plane
+                    imgpts, jac = cv2.projectPoints(axis, rvecs, tvecs, mtx, dist)
+
+                    img = draw(img,corners2,imgpts)
+                    cv2.imshow('img',img)
+                    k = cv2.waitKey(0) & 0xff
+                    if k == 's':
+                        cv2.imwrite(fname[:6]+'.png', img)
+
+            cv2.destroyAllWindows()
+
+    Optional: Draw a cube instead of XYZ axes
+    
+        Use a modified draw() function:
+
+            def draw(img, corners, imgpts):
+                imgpts = np.int32(imgpts).reshape(-1,2)
+
+                # draw ground floor in green
+                img = cv2.drawContours(img, [imgpts[:4]],-1,(0,255,0),-3)
+
+                # draw pillars in blue color
+                for i,j in zip(range(4),range(4,8)):
+                    img = cv2.line(img, tuple(imgpts[i]), tuple(imgpts[j]),(255),3)
+
+                # draw top layer in red color
+                img = cv2.drawContours(img, [imgpts[4:]],-1,(0,0,255),3)
+
+                return img
+
+        Modified axis points:
+
+            axis = np.float32([ [0,0,0], [0,3,0], [3,3,0], [3,0,0],
+                                [0,0,-3], [0,3,-3], [3,3,-3], [3,0,-3] ])
+
+
+
+
+

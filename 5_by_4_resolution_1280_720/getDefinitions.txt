@@ -1,0 +1,15 @@
+### openCV functions / objects to define for documentation and robotics tutorials
+
+termination criteria
+    TERM_CRITERIA_EPS
+    TERM_CRITERIA_MAX_ITER
+
+cv2.findChessboardCorners()
+cv2.cornerSubPix()
+cv2.drawChessboardCorners()
+cv2.imshow()
+cv2.waitKey()
+cv2.destroyAllWindows()
+
+cv2.calibrateCamera()
+ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)

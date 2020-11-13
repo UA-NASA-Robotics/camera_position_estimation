@@ -5,7 +5,13 @@ import glob
 import math
 import time
 import imutils
+from queue import Queue
 
+# buffer for moving_avg
+BUFFER_SIZE = 50
+buffer = Queue(maxsize = BUFFER_SIZE)
+x_sum = 0
+y_sum = 0
 # Load previously saved data
 with np.load('video.npz') as X:
     mtx, dist, _, _ = [X[i] for i in ('mtx','dist','rvecs','tvecs')]
@@ -23,15 +29,32 @@ def location(corners):
     height = abs(corners[0][0][1] - corners[3][0][1])
     return percentage, width, height
 
+
 def draw(img, corners, imgpts):
     corner = tuple(corners[0].ravel())
     img = cv.line(img, corner, tuple(imgpts[0].ravel()), (255,0,0), 5)
     img = cv.line(img, corner, tuple(imgpts[1].ravel()), (0,255,0), 5)
     img = cv.line(img, corner, tuple(imgpts[2].ravel()), (0,0,255), 5)
     return img
+
+
 def distance_to_camera(knownWidth, focalLength, perWidth):
 	# compute and return the distance from the maker to the camera
 	return (knownWidth * focalLength) / perWidth
+
+
+def moving_avg(cam_output):
+        global x_sum, y_sum
+        if buffer.full():
+                out = buffer.get()
+                x_sum -= out[0]
+                y_sum -= out[1]
+        buffer.put(cam_output)
+        x_sum += cam_output[0]
+        y_sum += cam_output[1]
+        return x_sum / BUFFER_SIZE, y_sum / BUFFER_SIZE
+
+
 row = 4
 col = 3
 cap = cv.VideoCapture(0)
@@ -41,7 +64,7 @@ cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720) #600, 720
 cap.set(cv.CAP_PROP_BUFFERSIZE, 0)
 #cap.set(cv.cv2.CAP_PROP_FPS, 10)
 #cap = VideoStream(src=0).start()
-# pixel length = 212.6, distance = 
+# pixel length = 212.6, distance =
 known_distance = 67 # cm
 known_length = 15.5 # cm
 pixel_length = 212.6
@@ -102,11 +125,14 @@ while(True):
         print(roll)
         x_distance = math.cos(roll*math.pi/180)*distance
         y_distance = abs(math.sin(roll*math.pi/180)*distance)
+        xy_pair = (x_distance, y_distance)
+        x_avg, y_avg = moving_avg(xy_pair)
+        
+
         print("X DISTANCE:")
-        print(x_distance)
+        print(x_avg)
         print("Y DISTANCE:")
-        print(y_distance) #bad values!
-        print("giving me bad values!")
+        print(y_avg)
 
         #print('Roll: {:.2f}\nPitch: {:.2f}\nYaw: {:.2f}'.format(float(roll), float(pitch), float(yaw)))
         # # project 3D points to image plane
