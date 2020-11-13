@@ -9,12 +9,15 @@ from queue import Queue
 
 # buffer for moving_avg
 BUFFER_SIZE = 50
-buffer = Queue(maxsize = BUFFER_SIZE)
+sum = 0
 x_sum = 0
 y_sum = 0
+buffer = Queue(maxsize = BUFFER_SIZE)
+xy_buffer = Queue(maxsize = BUFFER_SIZE)
+
 # Load previously saved data
 with np.load('video.npz') as X:
-    mtx, dist, _, _ = [X[i] for i in ('mtx','dist','rvecs','tvecs')]
+    mtx, dist, _, _ = [X[i] for i in ('mtx', 'dist', 'rvecs', 'tvecs')]
 
 print(cv.__version__)
 print("mtx:")
@@ -22,6 +25,7 @@ print(mtx)
 print(type(mtx))
 print("dist:")
 print(dist)
+
 
 def location(corners):
     percentage = corners[0][0][0]/1280
@@ -43,13 +47,23 @@ def distance_to_camera(knownWidth, focalLength, perWidth):
 	return (knownWidth * focalLength) / perWidth
 
 
-def moving_avg(cam_output):
-        global x_sum, y_sum
+def moving_avg_1(cam_output):
+        global sum
         if buffer.full():
-                out = buffer.get()
-                x_sum -= out[0]
-                y_sum -= out[1]
+            out = buffer.get()
+            sum -= out[0]
         buffer.put(cam_output)
+        sum += cam_output[0]
+        return sum / BUFFER_SIZE
+
+
+def moving_avg_2(cam_output):
+        global x_sum, y_sum
+        if xy_buffer.full():
+            out = xy_buffer.get()
+            x_sum -= out[0]
+            y_sum -= out[1]
+        xy_buffer.put(cam_output)
         x_sum += cam_output[0]
         y_sum += cam_output[1]
         return x_sum / BUFFER_SIZE, y_sum / BUFFER_SIZE
@@ -68,7 +82,7 @@ cap.set(cv.CAP_PROP_BUFFERSIZE, 0)
 known_distance = 67 # cm
 known_length = 15.5 # cm
 pixel_length = 212.6
-focal_length = (pixel_length*known_distance)/known_length
+focal_length = (pixel_length * known_distance) / known_length
 
 while(True):
     #time.sleep(.5)
@@ -77,16 +91,16 @@ while(True):
     #frame = imutils.resize(frame, width=400)
     # Our operations on the frame come here
     gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-    ret2, corners = cv.findChessboardCorners(gray, (row,col),None) #worked!
+    ret2, corners = cv.findChessboardCorners(gray, (row, col), None)
     #print("corners")
     #print(corners)
     criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-    objp = np.zeros((col*row,3), np.float32)
+    objp = np.zeros((col*row, 3), np.float32)
     objp[:,:2] = np.mgrid[0:row,0:col].T.reshape(-1,2)
-    axis = np.float32([[3,0,0], [0,3,0], [0,0,-3]]).reshape(-1,3)
+    axis = np.float32([[3, 0, 0], [0, 3, 0], [0, 0, -3]]).reshape(-1, 3)
 
     if ret2 == True:
-        corners2 = cv.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
+        corners2 = cv.cornerSubPix(gray, corners, (11,11), (-1,-1), criteria)
         #print("corners2:")
         #print(corners2)
 
@@ -104,7 +118,7 @@ while(True):
 
         # Find the rotation and translation vectors.
         try:
-            ret,rvecs,tvecs, inliers = cv.solvePnPRansac(objp, corners2, mtx, dist) #try Ransac
+            ret, rvecs, tvecs, inliers = cv.solvePnPRansac(objp, corners2, mtx, dist) #try Ransac
         except:
             print("error")
             continue
@@ -121,14 +135,13 @@ while(True):
         # print(pmat)
         # print("dist:")
         # print(dist)
+        
         roll, pitch, yaw = cv.decomposeProjectionMatrix(pmat)[-1]
         print(roll)
-        x_distance = math.cos(roll*math.pi/180)*distance
-        y_distance = abs(math.sin(roll*math.pi/180)*distance)
+        x_distance = math.cos(roll * math.pi / 180) * distance
+        y_distance = abs(math.sin(roll * math.pi / 180) * distance)
         xy_pair = (x_distance, y_distance)
         x_avg, y_avg = moving_avg(xy_pair)
-        
-
         print("X DISTANCE:")
         print(x_avg)
         print("Y DISTANCE:")
@@ -138,7 +151,7 @@ while(True):
         # # project 3D points to image plane
         imgpts, jac = cv.projectPoints(axis, rvecs, tvecs, mtx, dist)
         try:
-            img = draw(frame,corners2,imgpts)
+            img = draw(frame, corners2, imgpts)
         except:
             print("error in draw function")
             continue
@@ -159,7 +172,7 @@ while(True):
     # k = cv2.waitKey(0) & 0xFF
     # if k == ord('s'):
     #     cv2.imwrite(fname[:6]+'.png', frame)
-    
+
 # When everything done, release the capture
 cap.release()
 cv2.destroyAllWindows()
