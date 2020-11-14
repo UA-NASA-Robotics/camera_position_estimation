@@ -1,4 +1,12 @@
-# testing image corners
+######################################################################################
+###     videoStream.py
+###     University of Akron NASA Robotic Mining Team
+###     Source:     OpenCV pose estimation tutorial
+###     Date:       11.13.2020
+###     Authors:    Wilson Woods
+###                 David Klett
+######################################################################################
+
 import numpy as np
 import cv2 as cv
 import glob
@@ -15,16 +23,9 @@ y_sum = 0
 buffer = Queue(maxsize = BUFFER_SIZE)
 xy_buffer = Queue(maxsize = BUFFER_SIZE)
 
-# Load previously saved data
+# Load calibration data
 with np.load('video.npz') as X:
     mtx, dist, _, _ = [X[i] for i in ('mtx', 'dist', 'rvecs', 'tvecs')]
-
-print(cv.__version__)
-print("mtx:")
-print(mtx)
-print(type(mtx))
-print("dist:")
-print(dist)
 
 
 def location(corners):
@@ -43,17 +44,16 @@ def draw(img, corners, imgpts):
 
 
 def distance_to_camera(knownWidth, focalLength, perWidth):
-	# compute and return the distance from the maker to the camera
+	# compute and return the distance from the target to the camera
 	return (knownWidth * focalLength) / perWidth
 
 
 def moving_avg_1(cam_output):
         global sum
         if buffer.full():
-            out = buffer.get()
-            sum -= out[0]
+            sum -= buffer.get()
         buffer.put(cam_output)
-        sum += cam_output[0]
+        sum += cam_output
         return sum / BUFFER_SIZE
 
 
@@ -72,53 +72,38 @@ def moving_avg_2(cam_output):
 row = 4
 col = 3
 cap = cv.VideoCapture(0)
-#cap = cv.VideoCapture(0,cv.CAP_DSHOW)
 cap.set(cv.CAP_PROP_FRAME_WIDTH, 1280) #800, 1280
 cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720) #600, 720
 cap.set(cv.CAP_PROP_BUFFERSIZE, 0)
-#cap.set(cv.cv2.CAP_PROP_FPS, 10)
-#cap = VideoStream(src=0).start()
+
 # pixel length = 212.6, distance =
 known_distance = 67 # cm
 known_length = 15.5 # cm
 pixel_length = 212.6
 focal_length = (pixel_length * known_distance) / known_length
 
+
 while(True):
-    #time.sleep(.5)
     # Capture frame-by-frame
-    ret1, frame = cap.read()
-    #frame = imutils.resize(frame, width=400)
+    read_success, frame = cap.read()
     # Our operations on the frame come here
-    gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-    ret2, corners = cv.findChessboardCorners(gray, (row, col), None)
-    #print("corners")
-    #print(corners)
+    gray_image = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+    corners_found, raw_corners = cv.findChessboardCorners(gray_image, (row, col), None)
+
     criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
     objp = np.zeros((col*row, 3), np.float32)
-    objp[:,:2] = np.mgrid[0:row,0:col].T.reshape(-1,2)
+    objp[:, :2] = np.mgrid[0:row,0:col].T.reshape(-1,2)
     axis = np.float32([[3, 0, 0], [0, 3, 0], [0, 0, -3]]).reshape(-1, 3)
 
-    if ret2 == True:
-        corners2 = cv.cornerSubPix(gray, corners, (11,11), (-1,-1), criteria)
-        #print("corners2:")
-        #print(corners2)
-
-        #print("location:")
-        #print(location(corners2))
-        length = abs(corners2[0][0][1] - corners2[3][0][1])
-        #print("length")
-        #print(length)
+    if corners_found:
+        refined_corners = cv.cornerSubPix(gray_image, raw_corners, (11,11), (-1,-1), criteria)
+        length = abs(refined_corners[0][0][1] - refined_corners[3][0][1])
         #focal_lenth = (length[0]*known_distance)/known_width
-        #print("focal_lenth:")
-        #print(focal_length)
-        print("distance:")
         distance = distance_to_camera(known_length, focal_length, length)
-        print(distance)
 
         # Find the rotation and translation vectors.
         try:
-            ret, rvecs, tvecs, inliers = cv.solvePnPRansac(objp, corners2, mtx, dist) #try Ransac
+            ret, rvecs, tvecs, inliers = cv.solvePnPRansac(objp, refined_corners, mtx, dist) #try Ransac
         except:
             print("error")
             continue
@@ -127,31 +112,28 @@ while(True):
         rotation_matrix, jacobian = cv.Rodrigues(rvecs)
         tvecs_new = -np.matrix(rotation_matrix).T * np.matrix(tvecs)
 
-         # Projection Matrix
+        # Projection Matrix
         pmat = np.hstack((rotation_matrix, tvecs)) # [R|t]
-        # print("camera matrix:")
-        # print(mtx)
-        # print("[R|t]")
-        # print(pmat)
-        # print("dist:")
-        # print(dist)
-        
         roll, pitch, yaw = cv.decomposeProjectionMatrix(pmat)[-1]
-        print(roll)
+        
         x_distance = math.cos(roll * math.pi / 180) * distance
         y_distance = abs(math.sin(roll * math.pi / 180) * distance)
         xy_pair = (x_distance, y_distance)
-        x_avg, y_avg = moving_avg(xy_pair)
+        x_avg, y_avg = moving_avg_2(xy_pair)
+        dist_avg = moving_avg_1(distance)
+        
         print("X DISTANCE:")
         print(x_avg)
         print("Y DISTANCE:")
         print(y_avg)
+        # print("DISTANCE:")
+        # print(dist_avg)
+        # print('Roll: {:.2f}\tPitch: {:.2f}\tYaw: {:.2f}'.format(float(roll), float(pitch), float(yaw)))
 
-        #print('Roll: {:.2f}\nPitch: {:.2f}\nYaw: {:.2f}'.format(float(roll), float(pitch), float(yaw)))
         # # project 3D points to image plane
         imgpts, jac = cv.projectPoints(axis, rvecs, tvecs, mtx, dist)
         try:
-            img = draw(frame, corners2, imgpts)
+            img = draw(frame, refined_corners, imgpts)
         except:
             print("error in draw function")
             continue
@@ -173,6 +155,5 @@ while(True):
     # if k == ord('s'):
     #     cv2.imwrite(fname[:6]+'.png', frame)
 
-# When everything done, release the capture
 cap.release()
 cv2.destroyAllWindows()

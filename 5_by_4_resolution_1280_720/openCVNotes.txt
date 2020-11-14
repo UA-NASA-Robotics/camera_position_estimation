@@ -307,7 +307,61 @@ This will allow us to simulate 3 dimensions and assess the varying depth of the 
             axis = np.float32([ [0,0,0], [0,3,0], [3,3,0], [3,0,0],
                                 [0,0,-3], [0,3,-3], [3,3,-3], [3,0,-3] ])
 
+########################################################################################
+########################################################################################
+cv2 functions & condensed steps for calibration
 
 
+# STEP 0: termination criteria
+# criteria = (criteria, max_iter, epsilon)
+# TERM_CRITERIA_EPS: stop the algorithm iteration if specified accuracy, epsilon, is reached
+# TERM_CRITERIA_MAX_ITER - stop the algorithm after the specified number of iterations, max_iter
+# TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER - stop the iteration when any of the above condition is met
+criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 
+# STEP 1: find chessboard corners
+# findChessboardCorners(image, patternSize, corners)
+# image = source chessboard image. must be 8-bit, grayscale or color
+# patternSize = # of inner corners for chessboard rows and columns
+# output array of detected corners
+# function will return 0 on failure to find and order corners
+corners_found, corners = cv.findChessboardCorners(gray, (row, col), None)
+
+
+# STEP 2: Refine corner location to sub-pixel level accuracy
+# cornerSubPix(image, corners, winSize, zeroZone, criteria)
+# image = single-channel, 8-bit or float image
+# corners = initial coordinates of the input corners and refined coordinates
+# provided for output
+# winSize = half the side length of the search window
+    # ex: if winSize = Size(5, 5), then we have 11 x 11 search windown
+# zeroZone = half of the size of the dead region in the middle of the search zone
+    # (-1, -1) indicates no such size / zone
+# criteria = criteria for termination of the iterative corner refinement
+# return: refined corner locations
+refined_corners = cv.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+imgpoints.append(corners)
+
+# STEP 3: Draw and display the corners
+# drawChessboardCorners(image, patternSize, corners, patternWasFound)
+# image = destination image, must be 8-bit, color
+# patternSize = # of inner corners per chessboard row and column
+# corners = array of detected corners
+    # numerical output from findChessboardCorenrs() should be passed here
+# patternWasFound = boolean indicating whether complete board was detected
+    # boolean output from findChessboardCorners() should be passed here
+cv.drawChessboardCorners(img, (row, col), refined_corners, corners_found)
+
+# STEP 4: Calibrate the camera
+# calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix, distCoeffs)
+# objectPoints = points in 3-D space
+# imagePoints = points in 2-D space
+# imageSize = size of image (this is only used to initialize the camera intrinsic matrix)
+# camera matrix = 3 x 3 matrix containing focal length and optical centers of the camera
+# see openCVNotes.txt for more
+# distCoeffs = distortion coefficients (for fitting the radial/tangential distortion model)
+# return: RMS re-projection error, camera matrix, distortion coeffs, rotation vectors, translation vectors
+    # not that RMS should be between 0.1 and 1.0 pixels for good calibration
+rms, mtx, dist, rvecs, tvecs = cv.calibrateCamera(
+    objpoints, imgpoints, gray.shape[::-1], None, None)
