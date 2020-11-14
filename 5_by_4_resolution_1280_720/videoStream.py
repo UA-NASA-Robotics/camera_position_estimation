@@ -13,6 +13,7 @@ import glob
 import math
 import time
 import imutils
+from collections import namedtuple
 from queue import Queue
 
 # buffer for moving_avg
@@ -68,9 +69,9 @@ def moving_avg_2(cam_output):
         y_sum += cam_output[1]
         return x_sum / BUFFER_SIZE, y_sum / BUFFER_SIZE
 
+coord_pair = namedtuple('coord_pair', ['row', 'col'])
+num_corners = coord_pair(row=4, col=3)
 
-row = 4
-col = 3
 cap = cv.VideoCapture(0)
 cap.set(cv.CAP_PROP_FRAME_WIDTH, 1280) #800, 1280
 cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720) #600, 720
@@ -88,11 +89,11 @@ while(True):
     read_success, frame = cap.read()
     # Our operations on the frame come here
     gray_image = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-    corners_found, raw_corners = cv.findChessboardCorners(gray_image, (row, col), None)
+    corners_found, raw_corners = cv.findChessboardCorners(gray_image, (num_corners.row, num_corners.col), None)
 
     criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-    objp = np.zeros((col*row, 3), np.float32)
-    objp[:, :2] = np.mgrid[0:row,0:col].T.reshape(-1,2)
+    objp = np.zeros((num_corners.col * num_corners.row, 3), np.float32)
+    objp[:, :2] = np.mgrid[0:num_corners.row,0:num_corners.col].T.reshape(-1,2)
     axis = np.float32([[3, 0, 0], [0, 3, 0], [0, 0, -3]]).reshape(-1, 3)
 
     if corners_found:
